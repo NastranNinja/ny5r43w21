@@ -35,12 +35,13 @@ from Nastran.Results import f06DataTables
 
 class f06File():
     
-    def __init__(self, fileName, mode='rb'):
+    def __init__(self, fileName):
         # instance variables
-        self.file = open(fileName,mode)
+        import os
+        self.file = os.path.abspath(fileName)
+        self.mode = 'rb'
         self._pages = []
-        self._scan()
-        self._generateHash()
+        #self._scanFile()
             
     def getPage(self, pageNum):
         return self._pages[pageNum]
@@ -52,24 +53,24 @@ class f06File():
                 titles.append(page.title)
         return titles
         
-    def getElementResults(self, resultTitle):
-        # accepts: result title (resultTitle)
+    def getElementResults(self, title):
+        # accepts: result title (title)
         # returns: Dictionary tuple (header, results),
         #   header[ subcase ]  
         #   results[ subcase ][ elementID ]
         import time
-        assert resultTitle in self.getTitles()
+        assert title in self.getTitles()
         # initialize results collection object
         results = Collections.ElementResults()
         # initialize dictionaries to contain all data and headers 
         data = {}
         header = {}
         # grab parser function from f06DataTables module
-        parseFunction = f06DataTables.parserTools[resultTitle]
+        parseFunction = f06DataTables.parserTools[title]
         startTime = time.time()
         # filter the file for pages with indicated result title and 
         # iterate through each page storing the data
-        for page in self._filterFile(resultTitle):
+        for page in self._filterFile(title):
             # check if subcase has been found yet, if not add it
             # to dictionaries
             subcase = page.subcase
@@ -82,29 +83,29 @@ class f06File():
             results[subcase] = parseFunction(data[subcase])
         print "%.2f seconds" % (time.time() - startTime,)
         return header, results
-    
-    def getHash(self):
-        # returns hash ID of file
-        return self._hash
-    
-    def _filterFile(self, title):
-        # accepts 'title', returns pages of type 'title'
-        filterFunc = lambda page: page.title==title
-        return itertools.ifilter(filterFunc, self._pages)                   
         
-    def _scan(self):
+    def getHash(self):
+        # generates a hash ID for future new file checks
+        import hashlib
+        fileObj = open(self.file, self.mode)
+        hashType = hashlib.sha256()
+        hashType.update(fileObj.read(256))
+        fileObj.close()
+        return hashType.digest()
+        
+    def scanFile(self):
         # scan the file and create f06Page objects
         import time
         import re
         startTime = time.time()
-        # move to top of file
-        self.file.seek(0)
+        # open file
+        fileObj = open(self.file, self.mode)
         # read line-by-line in binary mode, page information is stored
         # as byte locations
-        line = self.file.readline()
+        line = fileObj.readline()
         while line:
             # capture byte location for beginning of each line
-            beginLine = self.file.tell() - len(line)
+            beginLine = fileObj.tell() - len(line)
             if line.startswith('1'): # found a new page
                 pageNum = len(self._pages)
                 # if this is not the first page, save end location of 
@@ -121,18 +122,16 @@ class f06File():
                 resultTitle = self._parseTitle(line)
                 self._pages[-1].title = resultTitle
             # go to next line
-            line = self.file.readline()
+            line = fileObj.readline()
         self._pages[-1].end = beginLine
+        fileObj.close()
         print "%.2f seconds" % (time.time() - startTime,)
-        
-    def _generateHash(self):
-        # generates a hash ID for future new file checks
-        import hashlib
-        self.file.seek(0)
-        hashType = hashlib.sha256()
-        hashType.update(self.file.read(256))
-        self._hash = hashType.digest()
                 
+    def _filterFile(self, title):
+        # accepts 'title', returns pages of type 'title'
+        filterFunc = lambda page: page.title==title
+        return itertools.ifilter(filterFunc, self._pages)
+        
     def _parseTitle(self, line):
         # converts f06 title to key variable format,
         # '<ElementTYPE>_<resultsTYPE>'
@@ -160,6 +159,7 @@ class f06Page():
         self.number = number
         self.start = lineNum
         self.file = f06File
+        self.mode = 'rb'
         self.end = None
         self.title = None
         self.subcase = None
@@ -179,16 +179,21 @@ class f06Page():
     def getDataList(self):
         # returns: list of data lines from f06 page (excluding header)
         if not hasattr(self,'dataStartLine'): self._setDataStartLine()
-        self.file.seek(self.start)
+        fileObj = open(self.file, self.mode)        
+        fileObj.seek(self.start)
         numBytes = len(self)
-        pageLines = self.file.read(numBytes).splitlines()
+        pageLines = fileObj.read(numBytes).splitlines()
+        fileObj.close()
         return pageLines[self.dataStartLine:]
 
     def getHeader(self):
         # returns header of f06 page
-        if not hasattr(self,'dataStartLine'): self._setDataStartLine()      
-        self.file.seek(self.start)
-        return [self.file.readline() for i in range(self.dataStartLine)]
+        if not hasattr(self,'dataStartLine'): self._setDataStartLine() 
+        fileObj = open(self.file, self.mode)
+        fileObj.seek(self.start)
+        header =  [fileObj.readline() for i in range(self.dataStartLine)]
+        fileObj.close()
+        return header
         
     def _setDataStartLine(self):
         # sets data start line for page
