@@ -90,7 +90,7 @@ class f06Db(dict):
             print "updated: %s" % filename
             
     def getAllElementResults(self, title):
-        # returns header, results found in all files of self
+        # returns (header, results) found in all files of self
         allHeaders = {}
         allResults = {}
         for f06 in self.values():

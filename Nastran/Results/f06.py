@@ -35,10 +35,10 @@ from Nastran.Results import f06DataTables
 
 class f06File():
     
-    def __init__(self, fileName):
+    def __init__(self, filename):
         # instance variables
         import os
-        self.file = os.path.abspath(fileName)
+        self.file = filename
         self.mode = 'rb'
         self._pages = []
         #self._scanFile()
