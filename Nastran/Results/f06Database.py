@@ -31,7 +31,7 @@ DAMAGE.
 """
 from Nastran.Results.f06 import f06File
 
-class f06Db(dict):
+class f06Db():
     """
     This class creates objects that will control and monitor groups of f06
     files. Its attributes contain information about the files it monitors.
@@ -42,7 +42,7 @@ class f06Db(dict):
     """
     def __init__(self, f06FilePaths=[]):
         # instance variables
-        #self._files = {}
+        self._files = {}
         # f06FilePaths is List of f06 file paths
         self._buildCollection(f06FilePaths)
         
@@ -52,40 +52,44 @@ class f06Db(dict):
         for filePath in f06FilePaths:
             f06 = f06File(filePath)
             f06.scanFile()
-            self[f06.getHash()] = f06
+            self._files[f06.getHash()] = f06
+            
+    def getFileList(self):
+        # returns a list with all the filenames in the database
+        return [self._files[hashID].filename for hashID in self._files]
             
     def removeFile(self, filename):
         # removes item based on value
-        for (hashKey, f06) in self.items():
-            if f06.file == filename:
-                del self[hashKey]
+        for (hashKey, f06) in self._files.items():
+            if f06.filename == filename:
+                del self._files[hashKey]
                 break
             
     def addFile(self, filename):
         # adds filename with associated hash ID as key
         f06 = f06File(filename)
         f06.scanFile()
-        self[f06.getHash()] = f06
+        self._files[f06.getHash()] = f06
                     
     def checkForUpdates(self):
         # checks each file for same hash ID
         # if hash ID is different, the file is updated
         badFiles = []
         newFiles = []
-        for (hashKey, f06) in self.items():
-            try: f06Temp = f06File(f06.file)
+        for (hashKey, f06) in self._files.items():
+            try: f06Temp = f06File(f06.filename)
             except: 
-                print "could not find: %s" % f06.file
+                print "could not find: %s" % f06.filename
                 badFiles.append(hashKey)
                 continue
             if f06Temp.getHash() == hashKey: pass
             else: 
                 f06Temp.scanFile()
-                self[f06Temp.getHash()] = f06Temp
+                self._files[f06Temp.getHash()] = f06Temp
                 newFiles.append(f06Temp.file)
                 badFiles.append(hashKey)
         for hashKey in badFiles:
-            del self[hashKey]
+            del self._files[hashKey]
         for filename in newFiles:
             print "updated: %s" % filename
             
@@ -93,7 +97,7 @@ class f06Db(dict):
         # returns (header, results) found in all files of self
         allHeaders = {}
         allResults = {}
-        for f06 in self.values():
+        for f06 in self._files.values():
             headers, results = f06.getElementResults(title)
             allHeaders.update(headers)
             allResults.update(results)
@@ -103,9 +107,9 @@ class f06Db(dict):
         # saves self to disk at filename
         import shelve
         db = shelve.open(filename)
-        db.update(self)
+        db.update(self._files)
         db.close()
         
     def loadDb(self, filename):
         import shelve
-        self.update(shelve.open(filename))
+        self._files.update(shelve.open(filename))

@@ -37,8 +37,7 @@ class f06File():
     
     def __init__(self, filename):
         # instance variables
-        import os
-        self.file = filename
+        self.filename = filename
         self.mode = 'rb'
         self._pages = []
         #self._scanFile()
@@ -87,7 +86,7 @@ class f06File():
     def getHash(self):
         # generates a hash ID for future new file checks
         import hashlib
-        fileObj = open(self.file, self.mode)
+        fileObj = open(self.filename, self.mode)
         hashType = hashlib.sha256()
         hashType.update(fileObj.read(256))
         fileObj.close()
@@ -99,7 +98,7 @@ class f06File():
         import re
         startTime = time.time()
         # open file
-        fileObj = open(self.file, self.mode)
+        fileObj = open(self.filename, self.mode)
         # read line-by-line in binary mode, page information is stored
         # as byte locations
         line = fileObj.readline()
@@ -112,7 +111,7 @@ class f06File():
                 # previous page
                 if pageNum > 0: self._pages[-1].end = beginLine
                 # create the f06Page object and append it
-                self._pages.append(f06Page(pageNum,beginLine,self.file))
+                self._pages.append(f06Page(pageNum,beginLine,self.filename))
             elif 'SUBCASE ' in line: # found the subcase
                 # capture the subcase and add it to current page
                 subcase = self._captureSubCase(line)
@@ -154,11 +153,11 @@ class f06File():
         
 class f06Page():
     
-    def __init__(self, number, lineNum, f06File):
+    def __init__(self, number, lineNum, filename):
         # instance variables
         self.number = number
         self.start = lineNum
-        self.file = f06File
+        self.filename = filename
         self.mode = 'rb'
         self.end = None
         self.title = None
@@ -179,7 +178,7 @@ class f06Page():
     def getDataList(self):
         # returns: list of data lines from f06 page (excluding header)
         if not hasattr(self,'dataStartLine'): self._setDataStartLine()
-        fileObj = open(self.file, self.mode)        
+        fileObj = open(self.filename, self.mode)        
         fileObj.seek(self.start)
         numBytes = len(self)
         pageLines = fileObj.read(numBytes).splitlines()
@@ -189,7 +188,7 @@ class f06Page():
     def getHeader(self):
         # returns header of f06 page
         if not hasattr(self,'dataStartLine'): self._setDataStartLine() 
-        fileObj = open(self.file, self.mode)
+        fileObj = open(self.filename, self.mode)
         fileObj.seek(self.start)
         header =  [fileObj.readline() for i in range(self.dataStartLine)]
         fileObj.close()
