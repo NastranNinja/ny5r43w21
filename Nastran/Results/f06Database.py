@@ -43,6 +43,7 @@ class f06Db():
     def __init__(self, f06FilePaths=[]):
         # instance variables
         self._files = {}
+        self._filename = None
         # f06FilePaths is List of f06 file paths
         self._buildCollection(f06FilePaths)
         
@@ -86,7 +87,7 @@ class f06Db():
             else: 
                 f06Temp.scanFile()
                 self._files[f06Temp.getHash()] = f06Temp
-                newFiles.append(f06Temp.file)
+                newFiles.append(f06Temp.filename)
                 badFiles.append(hashKey)
         for hashKey in badFiles:
             del self._files[hashKey]
@@ -95,21 +96,30 @@ class f06Db():
             
     def getAllElementResults(self, title):
         # returns (header, results) found in all files of self
+        import time
         allHeaders = {}
         allResults = {}
+        start = time.time()
         for f06 in self._files.values():
             headers, results = f06.getElementResults(title)
             allHeaders.update(headers)
             allResults.update(results)
+        print 'All results read in %.2f' % (time.time() - start,)
         return allHeaders, allResults
         
-    def save(self, filename):
+    def save(self, filename=None):
         # saves self to disk at filename
         import shelve
+        # if filename not given, assume a db has been loaded and
+        # self._filename is not None
+        if not filename: filename = self._filename
         db = shelve.open(filename)
+        db.clear()
         db.update(self._files)
         db.close()
+        print '%i files written to database' % (len(self._files),)
         
     def loadDb(self, filename):
         import shelve
+        self._filename = filename
         self._files.update(shelve.open(filename))

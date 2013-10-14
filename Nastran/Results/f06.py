@@ -70,7 +70,7 @@ class f06File():
         # filter the file for pages with indicated result title and 
         # iterate through each page storing the data
         for page in self._filterFile(title):
-            # check if subcase has been found yet, if not add it
+            # check if subcase has been found yet, if not add key
             # to dictionaries
             subcase = page.subcase
             if subcase not in data: 
@@ -80,7 +80,7 @@ class f06File():
             data[subcase].extend(page.getDataList())
         for subcase in data:
             results[subcase] = parseFunction(data[subcase])
-        print "%.2f seconds" % (time.time() - startTime,)
+        print "%s loaded in %.2f seconds" % (title, time.time() - startTime)
         return header, results
         
     def getHash(self):
@@ -88,7 +88,7 @@ class f06File():
         import hashlib
         fileObj = open(self.filename, self.mode)
         hashType = hashlib.sha256()
-        hashType.update(fileObj.read(256))
+        hashType.update(fileObj.read(40*128)) # approx. 1st 40 lines
         fileObj.close()
         return hashType.digest()
         
@@ -99,6 +99,7 @@ class f06File():
         startTime = time.time()
         # open file
         fileObj = open(self.filename, self.mode)
+        print "scanning %s..." % fileObj.name
         # read line-by-line in binary mode, page information is stored
         # as byte locations
         line = fileObj.readline()
@@ -124,7 +125,7 @@ class f06File():
             line = fileObj.readline()
         self._pages[-1].end = beginLine
         fileObj.close()
-        print "%.2f seconds" % (time.time() - startTime,)
+        print "took %.2f seconds" % (time.time() - startTime,)
                 
     def _filterFile(self, title):
         # accepts 'title', returns pages of type 'title'
