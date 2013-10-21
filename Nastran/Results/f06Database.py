@@ -42,8 +42,8 @@ class f06Db():
     """
     def __init__(self, f06FilePaths=[]):
         # instance variables
-        self._files = {}
-        self._filename = None
+        self.files = {}
+        self.filename = None
         # f06FilePaths is List of f06 file paths
         self._buildCollection(f06FilePaths)
         
@@ -52,32 +52,34 @@ class f06Db():
         # keyed by hash ID
         for filePath in f06FilePaths:
             f06 = f06File(filePath)
-            f06.scanFile()
-            self._files[f06.getHash()] = f06
+            f06.scanHeaders()
+            f06.closeFile()
+            self.files[f06.getHash()] = f06
             
     def getFileList(self):
         # returns a list with all the filenames in the database
-        return [self._files[hashID].filename for hashID in self._files]
+        return self.files.values()
             
     def removeFile(self, filename):
         # removes item based on value
-        for (hashKey, f06) in self._files.items():
+        for (hashKey, f06) in self.files.items():
             if f06.filename == filename:
-                del self._files[hashKey]
+                del self.files[hashKey]
                 break
             
     def addFile(self, filename):
         # adds filename with associated hash ID as key
         f06 = f06File(filename)
-        f06.scanFile()
-        self._files[f06.getHash()] = f06
+        f06.scanHeaders()
+        f06.closeFile()
+        self.files[f06.getHash()] = f06
                     
     def checkForUpdates(self):
         # checks each file for same hash ID
         # if hash ID is different, the file is updated
         badFiles = []
         newFiles = []
-        for (hashKey, f06) in self._files.items():
+        for (hashKey, f06) in self.files.items():
             try: f06Temp = f06File(f06.filename)
             except: 
                 print "could not find: %s" % f06.filename
@@ -85,13 +87,12 @@ class f06Db():
                 continue
             if f06Temp.getHash() == hashKey: pass
             else: 
-                f06Temp.scanFile()
-                self._files[f06Temp.getHash()] = f06Temp
-                newFiles.append(f06Temp.filename)
+                newFiles.append(f06.filename)
                 badFiles.append(hashKey)
         for hashKey in badFiles:
-            del self._files[hashKey]
+            del self.files[hashKey]
         for filename in newFiles:
+            self.addFile(filename)
             print "updated: %s" % filename
             
     def getAllElementResults(self, title):
@@ -100,10 +101,12 @@ class f06Db():
         allHeaders = {}
         allResults = {}
         start = time.time()
-        for f06 in self._files.values():
+        for f06 in self.getFileList():
+            f06.openFile()
             headers, results = f06.getElementResults(title)
             allHeaders.update(headers)
             allResults.update(results)
+            f06.closeFile()
         print 'All results read in %.2f' % (time.time() - start,)
         return allHeaders, allResults
         
@@ -111,15 +114,15 @@ class f06Db():
         # saves self to disk at filename
         import shelve
         # if filename not given, assume a db has been loaded and
-        # self._filename is not None
-        if not filename: filename = self._filename
+        # self.filename is not None
+        if not filename: filename = self.filename
         db = shelve.open(filename)
         db.clear()
-        db.update(self._files)
+        db.update(self.files)
         db.close()
-        print '%i files written to database' % (len(self._files),)
+        print '%i files written to database' % (len(self.files),)
         
     def loadDb(self, filename):
         import shelve
-        self._filename = filename
-        self._files.update(shelve.open(filename))
+        self.filename = filename
+        self.files.update(shelve.open(filename))

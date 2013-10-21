@@ -29,7 +29,7 @@ THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 DAMAGE.
 ======================================================================
 """
-import itertools
+from itertools import ifilter
 from Nastran.Results import Collections
 from Nastran.Results import f06DataTables
 
@@ -38,16 +38,24 @@ class f06File():
     def __init__(self, filename):
         # instance variables
         self.filename = filename
-        self.mode = 'rb'
-        self._pages = []
+        self.lines = open(filename,'r').readlines()
+        self.pages = []
         #self._scanFile()
+        
+    #def __getattr__(self, name):
+        # for list attribute calls
+        #return getattr(self.lines, name)
+    
+    def __getitem__(self, key):
+        # for slicing operations
+        return self.lines[key]
             
     def getPage(self, pageNum):
-        return self._pages[pageNum]
+        return self.pages[pageNum]
        
     def getTitles(self):
         titles = []
-        for page in self._pages:
+        for page in self.pages:
             if page.title != None and page.title not in titles:
                 titles.append(page.title)
         return titles
@@ -69,7 +77,7 @@ class f06File():
         startTime = time.time()
         # filter the file for pages with indicated result title and 
         # iterate through each page storing the data
-        for page in self._filterFile(title):
+        for page in self._filterPages(title):
             # check if subcase has been found yet, if not add key
             # to dictionaries
             subcase = page.subcase
@@ -86,51 +94,102 @@ class f06File():
     def getHash(self):
         # generates a hash ID for future new file checks
         import hashlib
-        fileObj = open(self.filename, self.mode)
+        fileObj = open(self.filename, 'rb')
         hashType = hashlib.sha256()
         hashType.update(fileObj.read(40*128)) # approx. 1st 40 lines
         fileObj.close()
         return hashType.digest()
         
-    def scanFile(self):
+    def scanHeaders(self):
         # scan the file and create f06Page objects
         import time
-        import re
         startTime = time.time()
         # open file
-        fileObj = open(self.filename, self.mode)
-        print "scanning %s..." % fileObj.name
-        # read line-by-line in binary mode, page information is stored
-        # as byte locations
-        line = fileObj.readline()
-        while line:
-            # capture byte location for beginning of each line
-            beginLine = fileObj.tell() - len(line)
-            if line.startswith('1'): # found a new page
-                pageNum = len(self._pages)
-                # if this is not the first page, save end location of 
-                # previous page
-                if pageNum > 0: self._pages[-1].end = beginLine
-                # create the f06Page object and append it
-                self._pages.append(f06Page(pageNum,beginLine,self.filename))
-            elif 'SUBCASE ' in line: # found the subcase
-                # capture the subcase and add it to current page
-                subcase = self._captureSubCase(line)
-                self._pages[-1].subcase = subcase
-            elif re.search(r'\w\s\w\s\w\s.*\(.*\)',line): # found the title
-                # parse and capture the title, then add it to current page
-                resultTitle = self._parseTitle(line)
-                self._pages[-1].title = resultTitle
-            # go to next line
-            line = fileObj.readline()
-        self._pages[-1].end = beginLine
-        fileObj.close()
+        print "scanning %s..." % self.filename
+        # generate pages
+        self._generatePages()
+        for page in self.pages:
+            page.scanHeader()
         print "took %.2f seconds" % (time.time() - startTime,)
+        
+    def openFile(self):
+        self.lines = open(self.filename, 'r').readlines()
+    
+    def closeFile(self):
+        self.lines = []
+        
+    def _generatePages(self):
+        # generates f06Page objects, stores each instance in self.pages
+        startLines = self._getStartLines()
+        for i in range(len(startLines) - 1):
+            startLine = startLines[i]
+            endLine = startLines[i+1]
+            self.pages.append(f06Page(i, startLine, endLine, self))
+        
+    def _getStartLines(self):
+        # returns line numbers for all start lines in f06 file
+        indices = []
+        filterFunc = lambda line: line.startswith('1')
+        for line in ifilter(filterFunc, self):
+            indices.append(self.lines.index(line))
+        indices.append(len(self.lines))
+        return indices
                 
-    def _filterFile(self, title):
+    def _filterPages(self, title):
         # accepts 'title', returns pages of type 'title'
         filterFunc = lambda page: page.title==title
-        return itertools.ifilter(filterFunc, self._pages)
+        return ifilter(filterFunc, self.pages)
+
+        
+class f06Page():
+    # class variables
+    READ_HEADER_LENGTH = 10 # number of lines read during header scan
+    
+    def __init__(self, number, start, end, f06FileObj):
+        # instance variables
+        self.number = number
+        self.start = start
+        self.end = end
+        self.f06File = f06FileObj
+        self.title = None
+        self.subcase = None
+       
+    def __len__(self):
+        # returns page length in bytes
+        return int(self.end - self.start)
+    
+    def __iter__(self):
+        # for iteration (may be redundant)
+        return iter(self.getDataList())
+        
+    def __getitem__(self, key):
+        # for slicing operations
+        return self.getDataList()[key]
+    
+    def scanHeader(self):
+        import re
+        endLine = self.start + self.READ_HEADER_LENGTH
+        scanLines = self.f06File[ self.start:endLine ]
+        for line in scanLines:
+            if 'SUBCASE ' in line: # found subcase
+                # capture the subcase and add it to current page
+                subcase = self._captureSubCase(line)
+                self.subcase = subcase
+            elif re.search(r'\w\s\w\s\w\s.*\(.*\)',line): # found title
+                # parse and capture the title, then add it to current page
+                self.title = self._parseTitle(line)
+    
+    def getDataList(self):
+        # returns: list of data lines from f06 page (excluding header)
+        return self.f06File[ self.getDataStartLine() : self.end ]
+
+    def getHeader(self):
+        # returns header of f06 page
+        return self.f06File[ self.start : self.getDataStartLine() ]
+        
+    def getDataStartLine(self):
+        # sets data start line for page
+        return self.start + f06DataTables.startLines[self.title]
         
     def _parseTitle(self, line):
         # converts f06 title to key variable format,
@@ -150,51 +209,3 @@ class f06File():
     # future method to capture load steps in dynamic analyses    
     #def _captureLoadStep(self, line):
     #    return float(line.strip().split('=')[-1])
-
-        
-class f06Page():
-    
-    def __init__(self, number, lineNum, filename):
-        # instance variables
-        self.number = number
-        self.start = lineNum
-        self.filename = filename
-        self.mode = 'rb'
-        self.end = None
-        self.title = None
-        self.subcase = None
-       
-    def __len__(self):
-        # returns page length in bytes
-        return int(self.end - self.start)
-    
-    def __iter__(self):
-        # for iteration (may be redundant)
-        return iter(self.getDataList())
-        
-    def __getitem__(self, key):
-        # for slicing operations
-        return self.getDataList()[key]
-    
-    def getDataList(self):
-        # returns: list of data lines from f06 page (excluding header)
-        if not hasattr(self,'dataStartLine'): self._setDataStartLine()
-        fileObj = open(self.filename, self.mode)        
-        fileObj.seek(self.start)
-        numBytes = len(self)
-        pageLines = fileObj.read(numBytes).splitlines()
-        fileObj.close()
-        return pageLines[self.dataStartLine:]
-
-    def getHeader(self):
-        # returns header of f06 page
-        if not hasattr(self,'dataStartLine'): self._setDataStartLine() 
-        fileObj = open(self.filename, self.mode)
-        fileObj.seek(self.start)
-        header =  [fileObj.readline() for i in range(self.dataStartLine)]
-        fileObj.close()
-        return header
-        
-    def _setDataStartLine(self):
-        # sets data start line for page
-        self.dataStartLine = f06DataTables.startLines[self.title]
