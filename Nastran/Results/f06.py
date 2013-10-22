@@ -104,7 +104,6 @@ class f06File():
         # scan the file and create f06Page objects
         import time
         startTime = time.time()
-        # open file
         print "scanning %s..." % self.filename
         # generate pages
         self._generatePages()
@@ -128,12 +127,16 @@ class f06File():
         
     def _getStartLines(self):
         # returns line numbers for all start lines in f06 file
-        indices = []
-        filterFunc = lambda line: line.startswith('1')
+        # ends with last line in file
+        lineNumbers = range(len(self.lines))
+        linesDict = dict(zip(self.lines, lineNumbers))
+        startLines = []
+        filterFunc = lambda line: line.startswith('1') 
         for line in ifilter(filterFunc, self):
-            indices.append(self.lines.index(line))
-        indices.append(len(self.lines))
-        return indices
+            lineNum = linesDict[line]
+            startLines.append(lineNum)
+        startLines.append(len(self.lines))
+        return startLines
                 
     def _filterPages(self, title):
         # accepts 'title', returns pages of type 'title'
