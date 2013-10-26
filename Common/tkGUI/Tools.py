@@ -35,7 +35,7 @@ from tkFileDialog import *
 class InputFrame(Frame):
     def __init__(self, parent=None, label=None):
         Frame.__init__(self, parent)
-        self.pack(expand=YES, fill=BOTH)
+        #self.pack(expand=YES, fill=BOTH)
         self.textVar = StringVar()
         Label(self, text=label).pack(side=LEFT)
         self.Entry = Entry(self, textvariable=self.textVar)
@@ -72,6 +72,15 @@ class FindDir(InputFrame):
         InputFrame.__init__(self, parent, label)
     def callback(self):
         self.textVar.set(askdirectory())
+        
+class TextInput(Frame):
+    def __init__(self, parent=None, label=None):
+        Frame.__init__(self, parent)
+        Label(self, text=label).pack(side=LEFT)
+        self.text = Entry(self)
+        self.text.pack(side=LEFT, expand=YES, fill=X)
+    def getText(self):
+        return self.text.get()
 
 class ScrollListbox(Frame):
     def __init__(self,parent=None):
@@ -82,9 +91,14 @@ class ScrollListbox(Frame):
                                yscrollcommand=scroll.set)
         scroll.config(command=self.Listbox.yview)
         scroll.pack(side=RIGHT,fill=Y)
+        self.Listbox.pack(expand=YES, fill=BOTH)
+        Button(self, text='CLEAR', command=self.clear).pack(
+                side=RIGHT, expand=YES, fill=X)
+        Button(self, text='SELECT ALL', command=self.selectAll).pack(
+                side=RIGHT, expand=YES, fill=X)
     def fill(self,lineList):
-        for i in lineList:
-            self.Listbox.insert(END,lineList[i])
+        for string in lineList:
+            self.Listbox.insert(END,string)
     def selection(self):
         return (self.Listbox.get(x) for x in self.Listbox.curselection())
     def clear(self):
