@@ -73,7 +73,7 @@ class f06File():
         data = {}
         header = {}
         # grab parser function from f06DataTables module
-        parseFunction = f06DataTables.parserTools[title]
+        parserFunction = f06DataTables.parserTools[title]
         startTime = time.time()
         # filter the file for pages with indicated result title and 
         # iterate through each page storing the data
@@ -87,8 +87,9 @@ class f06File():
             # collect the page data
             data[subcase].extend(page.getDataList())
         for subcase in data:
-            results[subcase] = parseFunction(data[subcase])
-        print "%s loaded in %.2f seconds" % (title, time.time() - startTime)
+            results[subcase] = parserFunction(data[subcase])
+        print "%s : %s\nloaded in %.2f seconds" % \
+              (self.filename, title, time.time() - startTime)
         return header, results
         
     def getHash(self):

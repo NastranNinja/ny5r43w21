@@ -87,9 +87,19 @@ class Element0D(Linear):
         self.forces = forces
         # self.moments = np.array([Mx, My, Mz])
         self.moments = moments
+        # individual components
+        self.setComponents()
+    def setComponents(self):
+        self.Px = self.forces[0]
+        self.Py = self.forces[1]
+        self.Pz = self.forces[2]
+        self.Mx = self.moments[0]
+        self.My = self.moments[1]
+        self.Mz = self.moments[2]
     def flipSigns(self):
         self.forces = self.forces * -1.
         self.moments = self.moments * -1.
+        self.extractComponents()        
         
 class Element1D(Element):
     def __init__(self, ID, forces, momentsA, momentsB):
@@ -100,6 +110,17 @@ class Element1D(Element):
         self.momentsA = momentsA
         # self.momentsB = np.array([T, Myb, Mzb])
         self.momentsB = momentsB
+        # individual components
+        self.setComponents()
+    def setComponents(self):
+        self.Px = self.forces[0]
+        self.Vy = self.forces[1]
+        self.Vz = self.forces[2]
+        self.T = self.momentsA[0]
+        self.Mya = self.momentsA[1]
+        self.Mza = self.momentsA[2]
+        self.Myb = self.momentsB[1]
+        self.Mzb = self.momentsB[2]        
     def maxMoment(self):
         # compare 3D moment vector on each side
         # return highest side
@@ -114,6 +135,17 @@ class Element2D(Element):
         self.moments = moments
         # self.shears = np.array([Qx, Qy])
         self.shears = shears
+        # individual components
+        self.setComponents()
+    def setComponents(self):
+        self.Nx = self.forces[0]
+        self.Ny = self.forces[1]
+        self.Nxy = self.forces[2]
+        self.Mx = self.moments[0]
+        self.My = self.moments[1]
+        self.Mxy = self.moments[2]
+        self.Qx = self.shears[0]
+        self.Qy = self.shears[1]       
     def rotate(self, angle):
         # In-plane rotation
         raise NotImplementedError

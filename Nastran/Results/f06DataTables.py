@@ -55,7 +55,7 @@ def formatLine(line, offset=0):
     
 def groupLines(page, count, stride):
     # extracts 'count' number of lines at each 'stride'
-    # if 'stride' is greater than 'count' lines are skipped
+    # if 'stride' is greater than 'count', lines are skipped
     pageLineGroups = []
     for i in range(count):
         pageLineGroups.append(page[i::stride])
