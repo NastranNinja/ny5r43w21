@@ -2,7 +2,7 @@
 ===============================================================================
 http://opensource.org/licenses/BSD-2-Clause
 
-Copyright (c) 2013, Benjamin E. Taylor
+Copyright (c) 2014, Benjamin E. Taylor
  All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -29,7 +29,7 @@ THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 DAMAGE.
 ===============================================================================
 """
-from Nastran.Results.f06 import f06File
+from StrEngL.Nastran.Results.f06 import f06File
 
 class f06Db():
     """
@@ -83,14 +83,15 @@ class f06Db():
             try: f06Temp = f06File(f06.filename)
             except: 
                 print "could not find: %s" % f06.filename
-                badFiles.append(hashKey)
+                # highlight file row
+                badFiles.append(f06.filename)
                 continue
             if f06Temp.getHash() == hashKey: pass
             else: 
                 newFiles.append(f06.filename)
                 badFiles.append(hashKey)
-        for hashKey in badFiles:
-            del self.files[hashKey]
+        for filename in badFiles:
+            self.removeFile(filename)
         for filename in newFiles:
             self.addFile(filename)
             print "updated: %s" % filename
@@ -107,7 +108,7 @@ class f06Db():
             allHeaders.update(headers)
             allResults.update(results)
             f06.closeFile()
-        print 'All results read in %.2f' % (time.time() - start,)
+        print 'All results read in %.2f seconds.' % (time.time() - start,)
         return allHeaders, allResults
         
     def save(self, filename=None):

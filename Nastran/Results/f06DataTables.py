@@ -2,7 +2,7 @@
 ======================================================================
 http://opensource.org/licenses/BSD-2-Clause
 
-Copyright (c) 2013, Benjamin E. Taylor
+Copyright (c) 2014, Benjamin E. Taylor
  All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -30,7 +30,7 @@ DAMAGE.
 ======================================================================
 """
 import numpy as np
-from Nastran.Results import BaseClasses
+from StrEngL.Nastran.Results import BaseClasses
 # f06 results page data for each type
 
 #==============================================================================

@@ -2,7 +2,7 @@
 ======================================================================
 http://opensource.org/licenses/BSD-2-Clause
 
-Copyright (c) 2013, Benjamin E. Taylor
+Copyright (c) 2014, Benjamin E. Taylor
  All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -30,8 +30,8 @@ DAMAGE.
 ======================================================================
 """
 from itertools import ifilter
-from Nastran.Results import Collections
-from Nastran.Results import f06DataTables
+from StrEngL.Nastran.Results import Collections
+from StrEngL.Nastran.Results import f06DataTables
 
 class f06File():
     
@@ -61,10 +61,12 @@ class f06File():
         return titles
         
     def getElementResults(self, title):
-        # accepts: result title (title)
-        # returns: Dictionary tuple (header, results),
-        #   header[ subcase ]  
-        #   results[ subcase ][ elementID ]
+        """        
+        Accepts: title = result title
+        Returns: Dictionary tuple (header, results)
+           header[ subcase ]  
+           results[ subcase ][ elementID ]
+        """
         import time
         assert title in self.getTitles()
         # initialize results collection object
@@ -78,7 +80,7 @@ class f06File():
         # filter the file for pages with indicated result title and 
         # iterate through each page storing the data
         for page in self._filterPages(title):
-            # check if subcase has been found yet, if not add key
+            # check if subcase has been found yet, if not add subcase key
             # to dictionaries
             subcase = page.subcase
             if subcase not in data: 
@@ -97,7 +99,7 @@ class f06File():
         import hashlib
         fileObj = open(self.filename, 'rb')
         hashType = hashlib.sha256()
-        hashType.update(fileObj.read(40*128)) # approx. 1st 40 lines
+        hashType.update(fileObj.read(1000*128)) # approx. 1st 1000 lines
         fileObj.close()
         return hashType.digest()
         

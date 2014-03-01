@@ -58,11 +58,17 @@ def addMenuItems(menu, items):
                                    command = item[2])
 
 class InputFrame(Frame):
-    def __init__(self, parent=None, label=None, button=True):
+    def __init__(self, parent=None, label=None, button=True, chk=False):
         Frame.__init__(self, parent)
         #self.pack(expand=YES, fill=BOTH)
         self.textVar = StringVar()
         self.label = label
+        if chk:
+            self.chk = IntVar()
+            self.chk.set(1)
+            Checkbutton(self, 
+                        variable=self.chk, 
+                        command=self.setState).pack(side=LEFT)
         Label(self, text=self.label).pack(side=LEFT)
         self.Entry = Entry(self, textvariable=self.textVar)
         self.Entry.pack(side=LEFT, expand=YES, fill=X)
@@ -73,6 +79,11 @@ class InputFrame(Frame):
         pass
     def getInput(self):
         return self.textVar.get()
+    def setState(self):
+        if self.chk.get(): self.enable()
+        else:
+            self.clear()
+            self.disable()
     def disable(self):
         self.Entry.config(state=DISABLED)
         self.Button.config(state=DISABLED)
@@ -83,20 +94,20 @@ class InputFrame(Frame):
         self.Entry.delete(0,END)
         
 class FindFile(InputFrame):
-    def __init__(self, parent=None, label=None):
-        InputFrame.__init__(self, parent, label)
+    def __init__(self, parent=None, label=None, chk=False):
+        InputFrame.__init__(self, parent=parent, label=label, chk=chk)
     def callback(self):
         self.textVar.set(askopenfilename(title=self.label))
         
 class SaveFile(InputFrame):
     def __init__(self, parent=None, label=None):
-        InputFrame.__init__(self, parent, label)
+        InputFrame.__init__(self, parent=parent, label=label)
     def callback(self):
         self.textVar.set(asksaveasfilename())
     
 class FindDir(InputFrame):
     def __init__(self, parent=None, label=None):
-        InputFrame.__init__(self, parent, label)
+        InputFrame.__init__(self, parent=parent, label=label)
     def callback(self):
         self.textVar.set(askdirectory())
 
@@ -127,4 +138,13 @@ class ScrollListbox(Frame):
 class helpWindow(Frame):
     def __init__(self, parent=None, text=None):
         Frame.__init__(self, parent)
-        Label(self, text=text, justify=LEFT).pack(fill=BOTH, expand=YES)
+        sbar = Scrollbar(self)
+        txt = Text(self)
+        sbar.config(command=txt.yview)
+        txt.config(yscrollcommand=sbar.set)
+        sbar.pack(side=RIGHT, fill=Y)
+        txt.pack(side=TOP ,expand=YES, fill=BOTH, padx=5, pady=5)
+        self.pack(expand=YES, fill=BOTH)
+        txt.insert('1.0', text)
+        txt.config(bg='gray94')
+        txt.config(state=DISABLED)

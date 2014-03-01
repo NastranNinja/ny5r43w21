@@ -2,7 +2,7 @@
 ======================================================================
 http://opensource.org/licenses/BSD-2-Clause
 
-Copyright (c) 2013, Benjamin E. Taylor
+Copyright (c) 2014, Benjamin E. Taylor
  All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -36,12 +36,6 @@ class Result():
     #   self.subcase = subcase
     #   self.ID = ID
     #   self.source = source
-    def __add__(self, other):
-        raise NotImplementedError
-    def __sub__(self, other):
-        raise NotImplementedError
-    def __mul__(self, other):
-        raise NotImplementedError
     def getType(self):
         return type(self)
     
@@ -73,6 +67,30 @@ class Node(Linear):
         self.translations = translations
         # self.rotations = np.array([rx, ry, rz])
         self.rotations = rotations
+    def __add__(self, other):
+        translations =  self.translations + other.translations
+        rotations = self.rotations + other.rotations
+        return Node(None, translations, rotations)
+    def __sub__(self, other):
+        translations = self.translations - other.translations
+        rotations = self.rotations - other.rotations
+        return Node(None, translations, rotations)
+    def __mul__(self, scalar):
+        translations = self.translations * scalar
+        rotations = self.rotations * scalar
+        return Node(None, translations, rotations)
+    def __imul__(self, scalar):
+        self.translations = self.translations * scalar
+        self.rotations = self.rotations * scalar
+        return self
+    def __truediv__(self, scalar):
+        translations = self.translations / float(scalar)
+        rotations = self.rotations / float(scalar)
+        return Node(translations, rotations)
+    def __itruediv__(self, scalar):
+        self.translations = self.translations / float(scalar)
+        self.rotations = self.rotations / float(scalar)
+        return self
     def interpolate(self):
         raise NotImplementedError
     def extrapolate(self):
@@ -89,6 +107,32 @@ class Element0D(Linear):
         self.moments = moments
         # individual components
         self.setComponents()
+    def __add__(self, other):
+        forces =  self.forces + other.forces
+        moments = self.moments + other.moments
+        return Element0D(None, forces, moments)
+    def __sub__(self, other):
+        forces = self.forces - other.forces
+        moments = self.moments - other.moments
+        return Element0D(None, forces, moments)
+    def __mul__(self, scalar):
+        forces = self.forces * scalar
+        moments = self.moments * scalar
+        return Element0D(None, forces, moments)
+    def __imul__(self, scalar):
+        self.forces = self.forces * scalar
+        self.moments = self.moments * scalar
+        self.setComponents()
+        return self
+    def __truediv__(self, scalar):
+        forces = self.forces / float(scalar)
+        moments = self.moments / float(scalar)
+        return Element0D(None, forces, moments)
+    def __itruediv__(self, scalar):
+        self.forces = self.forces / float(scalar)
+        self.moments = self.moments / float(scalar)
+        self.setComponents()
+        return self
     def setComponents(self):
         self.Px = self.forces[0]
         self.Py = self.forces[1]
@@ -99,7 +143,7 @@ class Element0D(Linear):
     def flipSigns(self):
         self.forces = self.forces * -1.
         self.moments = self.moments * -1.
-        self.extractComponents()        
+        self.setComponents()
         
 class Element1D(Element):
     def __init__(self, ID, forces, momentsA, momentsB):
@@ -112,6 +156,38 @@ class Element1D(Element):
         self.momentsB = momentsB
         # individual components
         self.setComponents()
+    def __add__(self, other):
+        forces =  self.forces + other.forces
+        momentsA = self.momentsA + other.momentsA
+        momentsB = self.momentsB + other.momentsB
+        return Element1D(None, forces, momentsA, momentsB)
+    def __sub__(self, other):
+        forces = self.forces - other.forces
+        momentsA = self.momentsA - other.momentsA
+        momentsB = self.momentsB - other.momentsB
+        return Element1D(None, forces, momentsA, momentsB)
+    def __mul__(self, scalar):
+        forces = self.forces * scalar
+        momentsA = self.momentsA * scalar
+        momentsB = self.momentsB * scalar
+        return Element1D(None, forces, momentsA, momentsB)
+    def __imul__(self, scalar):
+        self.forces = self.forces * scalar
+        self.momentsA = self.momentsA * scalar
+        self.momentsB = self.momentsB * scalar
+        self.setComponents()
+        return self
+    def __truediv__(self, scalar):
+        forces = self.forces / float(scalar)
+        momentsA = self.momentsA / float(scalar)
+        momentsB = self.momentsB / float(scalar)
+        return Element1D(None, forces, momentsA, momentsB)
+    def __itruediv__(self, scalar):
+        self.forces = self.forces / float(scalar)
+        self.momentsA = self.momentsA / float(scalar)
+        self.momentsB = self.momentsB / float(scalar)
+        self.setComponents()
+        return self
     def setComponents(self):
         self.Px = self.forces[0]
         self.Vy = self.forces[1]
@@ -137,6 +213,38 @@ class Element2D(Element):
         self.shears = shears
         # individual components
         self.setComponents()
+    def __add__(self, other):
+        forces =  self.forces + other.forces
+        moments = self.moments + other.moments
+        shears = self.shears + other.shears
+        return Element2D(None, forces, moments, shears)
+    def __sub__(self, other):
+        forces = self.forces - other.forces
+        moments = self.moments - other.moments
+        shears = self.shears - other.shears
+        return Element2D(None, forces, moments, shears)
+    def __mul__(self, scalar):
+        forces = self.forces * scalar
+        moments = self.moments * scalar
+        shears = self.shears * scalar
+        return Element2D(None, forces, moments, shears)
+    def __imul__(self, scalar):
+        self.forces = self.forces * scalar
+        self.moments = self.moments * scalar
+        self.shears = self.shears * scalar
+        self.setComponents()
+        return self
+    def __truediv__(self, scalar):
+        forces = self.forces / float(scalar)
+        moments = self.moments / float(scalar)
+        shears = self.shears / float(scalar)
+        return Element2D(None, forces, moments, shears)
+    def __itruediv__(self, scalar):
+        self.forces = self.forces / float(scalar)
+        self.moments = self.moments / float(scalar)
+        self.shears = self.shears / float(scalar)
+        self.setComponents()
+        return self
     def setComponents(self):
         self.Nx = self.forces[0]
         self.Ny = self.forces[1]
