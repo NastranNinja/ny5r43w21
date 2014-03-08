@@ -46,16 +46,20 @@ startLines = {
 #==============================================================================   
 # general function tools
 #==============================================================================
-def formatLine(line, offset=0):
-    # formats lines for line-by-line result tables
+def formatLine(line, offset=0, pop=None):
+    """ formats lines for line-by-line result tables
+        line: line to format
+        offset: index to begin (everything before discarded)
+        pop: optional single item to remove"""
     data = line[offset:].strip().split()
+    if pop: data.pop(pop)
     ID = int(data.pop(0))
     data = map(lambda x: float(x), data)
     return ID, data
     
 def groupLines(page, count, stride):
-    # extracts 'count' number of lines at each 'stride'
-    # if 'stride' is greater than 'count', lines are skipped
+    """ extracts 'count' number of lines at each 'stride'
+        if 'stride' is greater than 'count', lines are skipped"""
     pageLineGroups = []
     for i in range(count):
         pageLineGroups.append(page[i::stride])
@@ -72,6 +76,17 @@ def parseQuad4Forces(page):
     results = {}
     for line in page:      
         ID, data = formatLine(line)
+        forces = np.array(data[:3])
+        moments = np.array(data[3:6])
+        shears = np.array(data[6:8])
+        results[ID] = BaseClasses.Element2D(ID, forces, moments, shears)
+    return results
+    
+def parseQuad4ForcesBilin(page):
+    results = {}
+    groups = groupLines(page, 1, 5)
+    for group in groups:      
+        ID, data = formatLine(group[0], offset=1, pop=1)
         forces = np.array(data[:3])
         moments = np.array(data[3:6])
         shears = np.array(data[6:8])
@@ -118,6 +133,7 @@ def parseCbeamForces(page):
 #==============================================================================
 parserTools = {
     'QUAD4_FORCES': lambda page: parseQuad4Forces(page),
+    'QUAD4_FORCES_BILIN': lambda page: parseQuad4ForcesBilin(page),
     'TRIA3_FORCES': lambda page: parseTria3Forces(page),
     'CBUSH_FORCES': lambda page: parseCbushForces(page),
     'CBAR_FORCES': lambda page: parseCbarForces(page),

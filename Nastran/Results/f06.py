@@ -74,12 +74,14 @@ class f06File():
         # initialize dictionaries to contain all data and headers 
         data = {}
         header = {}
-        # grab parser function from f06DataTables module
-        parserFunction = f06DataTables.parserTools[title]
         startTime = time.time()
         # filter the file for pages with indicated result title and 
         # iterate through each page storing the data
         for page in self._filterPages(title):
+            # grab parser function from f06DataTables module
+            if page.option: parseTitle = title + '_' + page.option
+            else: parseTitle = title
+            parserFunction = f06DataTables.parserTools[parseTitle]
             # check if subcase has been found yet, if not add subcase key
             # to dictionaries
             subcase = page.subcase
@@ -159,6 +161,7 @@ class f06Page():
         self.f06File = f06FileObj
         self.title = None
         self.subcase = None
+        self.option = None
        
     def __len__(self):
         # returns page length in bytes
@@ -179,8 +182,7 @@ class f06Page():
         for line in scanLines:
             if 'SUBCASE ' in line: # found subcase
                 # capture the subcase and add it to current page
-                subcase = self._captureSubCase(line)
-                self.subcase = subcase
+                self.subcase = self._captureSubCase(line)
             elif re.search(r'\w\s\w\s\w\s.*\(.*\)',line): # found title
                 # parse and capture the title, then add it to current page
                 self.title = self._parseTitle(line)
@@ -200,13 +202,19 @@ class f06Page():
     def _parseTitle(self, line):
         # converts f06 title to key variable format,
         # '<ElementTYPE>_<resultsTYPE>'
-        resTitle = [string.replace(' ','')
+        title = [string.replace(' ','')
                     for string in line.strip().split('  ')]
-        if any([')' in word for word in resTitle]):
-            resTitle = resTitle[-1]+resTitle[0]
-            resTitle = resTitle.strip('(').replace(')','_')
-        else: resTitle = '_'.join(resTitle)
-        return resTitle
+        # remove empty elements
+        while '' in title:
+            title.remove('')
+        if any([')' in word for word in title]):
+            # check for options (CORNER,CUBIC,SGAGE,BILIN)
+            if 'OPTION' in title[-1]: 
+                self.option = title.pop()[7:]
+            title = title[-1]+title[0]
+            title = title.strip('(').replace(')','_')
+        else: title = '_'.join(title)
+        return title
         
     def _captureSubCase(self, line):
         # strips subcase ID

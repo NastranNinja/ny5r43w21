@@ -82,7 +82,7 @@ class f06Db():
         for (hashKey, f06) in self.files.items():
             try: f06Temp = f06File(f06.filename)
             except: 
-                print "could not find: %s" % f06.filename
+                raise IOError, "could not find: %s" % f06.filename
                 # highlight file row
                 badFiles.append(f06.filename)
                 continue
